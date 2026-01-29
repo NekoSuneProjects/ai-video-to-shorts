@@ -71,6 +71,13 @@ function runFfmpegWithProgress(command, args, onProgress) {
   });
 }
 
+function resolvePackedBinary(binPath) {
+  if (!binPath) return null;
+  const unpacked = binPath.replace("app.asar", "app.asar.unpacked");
+  if (fs.existsSync(unpacked)) return unpacked;
+  return binPath;
+}
+
 function selectBestMoment(_inputPath, _settings) {
   // TODO: Implement audio-energy + reaction detection (smiles/laughs/cheers) scoring.
   return { start: 0, duration: _settings?.targetDuration || 30 };
@@ -558,7 +565,7 @@ async function processVideo(payload, onProgress) {
   ];
 
   try {
-    const ffmpegPath = ffmpegStatic || "ffmpeg";
+    const ffmpegPath = resolvePackedBinary(ffmpegStatic) || "ffmpeg";
     await runFfmpegWithProgress(ffmpegPath, ffmpegArgs, onProgress);
   } catch (error) {
     throw new Error("FFmpeg failed. Install FFmpeg or bundle ffmpeg-static.");

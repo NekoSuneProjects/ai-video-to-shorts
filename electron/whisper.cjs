@@ -52,6 +52,13 @@ function detectCudaAvailable() {
   return !!detectCudaVersion();
 }
 
+function resolvePackedBinary(binPath) {
+  if (!binPath) return null;
+  const unpacked = binPath.replace("app.asar", "app.asar.unpacked");
+  if (fs.existsSync(unpacked)) return unpacked;
+  return binPath;
+}
+
 function httpsGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const request = https.get(url, { headers }, (response) => {
@@ -319,7 +326,8 @@ function runWhisperCli(binary, args, onProgress, outputDir) {
 }
 
 function convertToWav(inputPath, outputDir, trim) {
-  if (!ffmpegStatic) {
+  const resolvedFfmpeg = resolvePackedBinary(ffmpegStatic);
+  if (!resolvedFfmpeg) {
     throw new Error("ffmpeg-static not found for audio conversion");
   }
   const outputPath = path.join(outputDir, `${path.parse(inputPath).name}.wav`);
@@ -338,7 +346,7 @@ function convertToWav(inputPath, outputDir, trim) {
       "pcm_s16le",
       outputPath
     ];
-    const child = spawn(ffmpegStatic, args, { stdio: "pipe" });
+    const child = spawn(resolvedFfmpeg, args, { stdio: "pipe" });
     child.on("error", reject);
     child.on("close", (code) => {
       if (code === 0) resolve(outputPath);
