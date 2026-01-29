@@ -10,6 +10,8 @@ out
 *.ass
 *.wts
 *.wav
-*.json
+# *.json
 ai-short-maker/
 shorts-output/
+
+!package.json
