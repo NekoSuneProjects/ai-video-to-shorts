@@ -38,6 +38,7 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState({ status: "idle" });
   const [updateChannel, setUpdateChannel] = useState("stable");
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+  const [appVersion, setAppVersion] = useState("0.0.0");
 
   const badge = useMemo(() => {
     if (!videoPath) return "No file";
@@ -57,13 +58,16 @@ export default function App() {
     const unsubscribe = window.api?.onUpdateStatus?.((data) => {
       if (data) {
         setUpdateStatus(data);
-        if (data.status === "downloaded") {
+        if (data.status === "downloaded" && !data.snoozed) {
           setShowUpdatePrompt(true);
         }
       }
     });
     window.api?.getUpdateChannel?.().then((res) => {
       if (res?.channel) setUpdateChannel(res.channel);
+    });
+    window.api?.getAppVersion?.().then((res) => {
+      if (res?.version) setAppVersion(res.version);
     });
     window.api?.checkForUpdates?.();
     const interval = setInterval(() => {
@@ -173,12 +177,6 @@ export default function App() {
               and burns Whisper captions in a vertical 9:16 format.
             </p>
           </div>
-          <button
-            onClick={openDialog}
-            className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white shadow-lg shadow-black/30 transition hover:border-neon/60 hover:text-neon"
-          >
-            Choose video
-          </button>
         </header>
 
         <section
@@ -571,6 +569,9 @@ export default function App() {
                 <p className="mt-2 text-xs text-white/60">
                   Channel: {updateChannel === "beta" ? "Beta (pre-releases)" : "Stable (releases)"}
                 </p>
+                {updateStatus.snoozed ? (
+                  <p className="mt-1 text-xs text-white/50">Updates are snoozed for now.</p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
                 <button
@@ -587,6 +588,19 @@ export default function App() {
                 </button>
               </div>
             </div>
+          </section>
+        ) : null}
+
+        {updateStatus.status === "none" || updateStatus.status === "checking" ? (
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <p className="text-sm uppercase tracking-[0.2em] text-white/70">Update</p>
+            <p className="mt-2 text-lg font-medium text-white">
+              {updateStatus.status === "checking" ? "Checking for updates..." : "Up to date"}
+            </p>
+            <p className="mt-1 text-sm text-white/70">
+              Version {appVersion} • Channel{" "}
+              {updateChannel === "beta" ? "Beta (pre-releases)" : "Stable (releases)"}
+            </p>
           </section>
         ) : null}
 

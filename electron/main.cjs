@@ -98,18 +98,20 @@ app.whenReady().then(() => {
     return { channel: getUpdateChannel() };
   });
 
+  ipcMain.handle("app:getVersion", async () => {
+    return { version: app.getVersion() };
+  });
+
   ipcMain.handle("update:check", async (event) => {
     const updateProvider = process.env.UPDATE_PROVIDER || "github";
-    if (!shouldNotifyUpdate()) {
-      event.sender.send("update:status", { status: "remind" });
-      return { status: "remind" };
-    }
+    const snoozed = !shouldNotifyUpdate();
     try {
+      event.sender.send("update:status", { status: "checking", snoozed });
       autoUpdater.allowPrerelease = getUpdateChannel() === "beta";
       if (updateProvider === "generic") {
         const updateUrl = process.env.UPDATE_URL;
         if (!updateUrl) {
-          event.sender.send("update:status", { status: "disabled" });
+          event.sender.send("update:status", { status: "disabled", snoozed });
           return { status: "disabled" };
         }
         autoUpdater.setFeedURL({ provider: "generic", url: updateUrl });
@@ -123,7 +125,7 @@ app.whenReady().then(() => {
       autoUpdater.checkForUpdates();
       return { status: "checking" };
     } catch (error) {
-      event.sender.send("update:status", { status: "error", message: error?.message });
+      event.sender.send("update:status", { status: "error", message: error?.message, snoozed });
       return { status: "error" };
     }
   });
@@ -146,20 +148,19 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on("update-available", (info) => {
-    if (!shouldNotifyUpdate()) return;
-    mainWindow?.webContents.send("update:status", { status: "available", info });
+    mainWindow?.webContents.send("update:status", { status: "available", info, snoozed: !shouldNotifyUpdate() });
   });
 
   autoUpdater.on("update-not-available", () => {
-    mainWindow?.webContents.send("update:status", { status: "none" });
+    mainWindow?.webContents.send("update:status", { status: "none", snoozed: !shouldNotifyUpdate() });
   });
 
   autoUpdater.on("update-downloaded", (info) => {
-    mainWindow?.webContents.send("update:status", { status: "downloaded", info });
+    mainWindow?.webContents.send("update:status", { status: "downloaded", info, snoozed: !shouldNotifyUpdate() });
   });
 
   autoUpdater.on("error", (error) => {
-    mainWindow?.webContents.send("update:status", { status: "error", message: error?.message });
+    mainWindow?.webContents.send("update:status", { status: "error", message: error?.message, snoozed: !shouldNotifyUpdate() });
   });
 });
 

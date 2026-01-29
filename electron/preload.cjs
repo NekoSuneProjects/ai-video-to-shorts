@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("api", {
   remindUpdateLater: () => ipcRenderer.invoke("update:remindLater"),
   getUpdateChannel: () => ipcRenderer.invoke("update:getChannel"),
   setUpdateChannel: (channel) => ipcRenderer.invoke("update:setChannel", channel),
+  getAppVersion: () => ipcRenderer.invoke("app:getVersion"),
   onUpdateStatus: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on("update:status", handler);
