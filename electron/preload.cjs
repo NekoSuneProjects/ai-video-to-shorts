@@ -4,6 +4,16 @@ contextBridge.exposeInMainWorld("api", {
   openFileDialog: () => ipcRenderer.invoke("dialog:openFile"),
   processVideo: (payload) => ipcRenderer.invoke("pipeline:process", payload),
   openExternal: (url) => ipcRenderer.invoke("shell:openExternal", url),
+  checkForUpdates: () => ipcRenderer.invoke("update:check"),
+  installUpdate: () => ipcRenderer.invoke("update:install"),
+  remindUpdateLater: () => ipcRenderer.invoke("update:remindLater"),
+  getUpdateChannel: () => ipcRenderer.invoke("update:getChannel"),
+  setUpdateChannel: (channel) => ipcRenderer.invoke("update:setChannel", channel),
+  onUpdateStatus: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on("update:status", handler);
+    return () => ipcRenderer.removeListener("update:status", handler);
+  },
   onError: (callback) => {
     const handler = (_event, data) => callback(data.message);
     ipcRenderer.on("pipeline:error", handler);

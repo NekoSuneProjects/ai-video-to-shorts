@@ -1,4 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const { autoUpdater } = require("electron-updater");
+const fs = require("fs");
 const path = require("path");
 const { processVideo } = require("./processor.cjs");
 
@@ -22,9 +24,43 @@ async function createWindow() {
   } else {
     await win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
+  return win;
 }
 
 app.whenReady().then(() => {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  const updateStatePath = path.join(app.getPath("userData"), "update-state.json");
+
+  const readUpdateState = () => {
+    try {
+      return JSON.parse(fs.readFileSync(updateStatePath, "utf8"));
+    } catch (error) {
+      return {};
+    }
+  };
+
+  const writeUpdateState = (state) => {
+    try {
+      fs.writeFileSync(updateStatePath, JSON.stringify(state, null, 2));
+    } catch (error) {
+      // ignore
+    }
+  };
+
+  const shouldNotifyUpdate = () => {
+    const state = readUpdateState();
+    const remindUntil = Number(state?.remindUntil || 0);
+    return !remindUntil || Date.now() > remindUntil;
+  };
+
+  const getUpdateChannel = () => {
+    const state = readUpdateState();
+    return state?.channel === "beta" ? "beta" : "stable";
+  };
+
+  let mainWindow = null;
+
   ipcMain.handle("dialog:openFile", async () => {
     const result = await dialog.showOpenDialog({
       properties: ["openFile"],
@@ -51,10 +87,79 @@ app.whenReady().then(() => {
     return shell.openExternal(url);
   });
 
-  createWindow();
+  ipcMain.handle("update:setChannel", async (_event, channel) => {
+    const normalized = channel === "beta" ? "beta" : "stable";
+    const state = readUpdateState();
+    writeUpdateState({ ...state, channel: normalized });
+    return { status: "ok", channel: normalized };
+  });
+
+  ipcMain.handle("update:getChannel", async () => {
+    return { channel: getUpdateChannel() };
+  });
+
+  ipcMain.handle("update:check", async (event) => {
+    const updateProvider = process.env.UPDATE_PROVIDER || "github";
+    if (!shouldNotifyUpdate()) {
+      event.sender.send("update:status", { status: "remind" });
+      return { status: "remind" };
+    }
+    try {
+      autoUpdater.allowPrerelease = getUpdateChannel() === "beta";
+      if (updateProvider === "generic") {
+        const updateUrl = process.env.UPDATE_URL;
+        if (!updateUrl) {
+          event.sender.send("update:status", { status: "disabled" });
+          return { status: "disabled" };
+        }
+        autoUpdater.setFeedURL({ provider: "generic", url: updateUrl });
+      } else {
+        autoUpdater.setFeedURL({
+          provider: "github",
+          owner: "NekoSuneProjects",
+          repo: "ai-video-to-shorts"
+        });
+      }
+      autoUpdater.checkForUpdates();
+      return { status: "checking" };
+    } catch (error) {
+      event.sender.send("update:status", { status: "error", message: error?.message });
+      return { status: "error" };
+    }
+  });
+
+  ipcMain.handle("update:install", async () => {
+    autoUpdater.quitAndInstall();
+  });
+
+  ipcMain.handle("update:remindLater", async () => {
+    writeUpdateState({ remindUntil: Date.now() + 24 * 60 * 60 * 1000 });
+    return { status: "remind" };
+  });
+
+  createWindow().then((win) => {
+    mainWindow = win;
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    if (!shouldNotifyUpdate()) return;
+    mainWindow?.webContents.send("update:status", { status: "available", info });
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    mainWindow?.webContents.send("update:status", { status: "none" });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    mainWindow?.webContents.send("update:status", { status: "downloaded", info });
+  });
+
+  autoUpdater.on("error", (error) => {
+    mainWindow?.webContents.send("update:status", { status: "error", message: error?.message });
   });
 });
 

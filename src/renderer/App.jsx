@@ -35,6 +35,9 @@ export default function App() {
   const [status, setStatus] = useState("Drop a video to begin");
   const [processing, setProcessing] = useState(false);
   const [outputPath, setOutputPath] = useState("");
+  const [updateStatus, setUpdateStatus] = useState({ status: "idle" });
+  const [updateChannel, setUpdateChannel] = useState("stable");
+  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
 
   const badge = useMemo(() => {
     if (!videoPath) return "No file";
@@ -49,6 +52,28 @@ export default function App() {
       // ignore persistence errors
     }
   }, [settings]);
+
+  useEffect(() => {
+    const unsubscribe = window.api?.onUpdateStatus?.((data) => {
+      if (data) {
+        setUpdateStatus(data);
+        if (data.status === "downloaded") {
+          setShowUpdatePrompt(true);
+        }
+      }
+    });
+    window.api?.getUpdateChannel?.().then((res) => {
+      if (res?.channel) setUpdateChannel(res.channel);
+    });
+    window.api?.checkForUpdates?.();
+    const interval = setInterval(() => {
+      window.api?.checkForUpdates?.();
+    }, 4 * 60 * 60 * 1000);
+    return () => {
+      if (unsubscribe) unsubscribe();
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleDrop = async (event) => {
     event.preventDefault();
@@ -109,6 +134,26 @@ export default function App() {
 
   const openUpload = () => {
     window.api?.openExternal?.("https://studio.youtube.com");
+  };
+
+  const handleUpdate = () => {
+    window.api?.installUpdate?.();
+  };
+
+  const remindLater = () => {
+    window.api?.remindUpdateLater?.();
+    setUpdateStatus({ status: "remind" });
+  };
+
+  const dismissUpdatePrompt = () => {
+    setShowUpdatePrompt(false);
+  };
+
+  const changeUpdateChannel = async (event) => {
+    const channel = event.target.value;
+    setUpdateChannel(channel);
+    await window.api?.setUpdateChannel?.(channel);
+    window.api?.checkForUpdates?.();
   };
 
   return (
@@ -493,11 +538,85 @@ export default function App() {
                       className="h-4 w-4 accent-neon"
                     />
                   </label>
+                  <label className="flex items-center justify-between">
+                    <span>Update channel</span>
+                    <select
+                      value={updateChannel}
+                      onChange={changeUpdateChannel}
+                      className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-white"
+                    >
+                      <option value="stable">Stable (releases)</option>
+                      <option value="beta">Beta (pre-releases)</option>
+                    </select>
+                  </label>
                 </div>
               </details>
             </div>
           </div>
         </section>
+
+        {updateStatus.status === "available" || updateStatus.status === "downloaded" ? (
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-white/70">Update</p>
+                <p className="mt-2 text-lg font-medium text-white">
+                  {updateStatus.status === "downloaded"
+                    ? "Update ready to install"
+                    : "Update available"}
+                </p>
+                <p className="mt-1 text-sm text-white/70">
+                  A newer version is available. You can install now or be reminded later.
+                </p>
+                <p className="mt-2 text-xs text-white/60">
+                  Channel: {updateChannel === "beta" ? "Beta (pre-releases)" : "Stable (releases)"}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleUpdate}
+                  className="rounded-full bg-neon px-5 py-2 text-sm font-semibold text-ink shadow-xl shadow-neon/30 transition hover:brightness-110"
+                >
+                  {updateStatus.status === "downloaded" ? "Restart & install" : "Install update"}
+                </button>
+                <button
+                  onClick={remindLater}
+                  className="rounded-full border border-white/15 bg-black/50 px-5 py-2 text-sm font-semibold text-white transition hover:border-neon/60 hover:text-neon"
+                >
+                  Remind me later
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {showUpdatePrompt ? (
+          <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/70 p-6">
+            <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink p-6 shadow-2xl shadow-black/50">
+              <p className="text-sm uppercase tracking-[0.2em] text-white/70">Update ready</p>
+              <h3 className="mt-2 text-2xl font-semibold text-white">
+                Restart to apply the update?
+              </h3>
+              <p className="mt-2 text-sm text-white/70">
+                The update has been downloaded. Restart now to install it.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  onClick={handleUpdate}
+                  className="rounded-full bg-neon px-5 py-2 text-sm font-semibold text-ink shadow-xl shadow-neon/30 transition hover:brightness-110"
+                >
+                  Yes, restart
+                </button>
+                <button
+                  onClick={dismissUpdatePrompt}
+                  className="rounded-full border border-white/15 bg-black/50 px-5 py-2 text-sm font-semibold text-white transition hover:border-neon/60 hover:text-neon"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <section className="rounded-3xl border border-white/10 bg-gradient-to-r from-electric/30 via-white/5 to-neon/20 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">

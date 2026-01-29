@@ -1,4 +1,4 @@
-# Shorts Lab
+Ôªø# Shorts Lab
 
 Shorts Lab is a local, self-hosted Electron app that turns long videos into YouTube Shorts format. It can auto-detect standout moments, crop to 9:16, and optionally burn captions using a local Whisper.cpp binary.
 
@@ -58,6 +58,39 @@ npm run build
 npm run dist
 ```
 
+
+## Builds
+
+Targets configured:
+
+- Windows: NSIS (.exe) and MSI
+- Linux: AppImage and DEB
+- macOS: DMG (TODO - requires macOS hardware for signing)
+
+Build commands:
+
+```bash
+npm run dist
+```
+
+Note: macOS builds require macOS hardware for codesigning/notarization.
+
+## Updates (GitHub Releases)
+
+This app is configured to check for updates via GitHub Releases:
+
+- Repo: `NekoSuneProjects/ai-video-to-shorts`
+- Uses `electron-updater` with the GitHub provider
+
+To publish updates, create a new GitHub Release with the built artifacts from `npm run dist`.
+On startup, the app checks for updates and shows an in-app banner with "Install" or "Remind me later".
+
+If you want to use a generic update feed instead, set:
+
+```
+UPDATE_PROVIDER=generic
+UPDATE_URL=https://your-update-server/
+```
 ## Output folders
 
 Exports are stored next to the input video under:
@@ -77,8 +110,8 @@ ai-short-maker/
 
 ## Troubleshooting
 
-- No captions: Make sure ìAdd captions (Whisper)î is enabled.
-- Whisper errors on Windows: Ensure VC++ Redistributable 2015ñ2022 is installed.
+- No captions: Make sure ‚ÄúAdd captions (Whisper)‚Äù is enabled.
+- Whisper errors on Windows: Ensure VC++ Redistributable 2015‚Äì2022 is installed.
 - Word-level missing: Some binaries do not output word timestamps; the app falls back to SRT.
 
 ## Roadmap
@@ -91,3 +124,4 @@ ai-short-maker/
 ## License
 
 MIT
+
