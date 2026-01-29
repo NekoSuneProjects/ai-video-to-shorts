@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui;
+}
+
+.neon-text {
+  color: #29f3c3;
+  text-shadow:
+    0 0 6px rgba(41, 243, 195, 0.9),
+    0 0 18px rgba(41, 243, 195, 0.6),
+    0 0 32px rgba(41, 243, 195, 0.4);
+}

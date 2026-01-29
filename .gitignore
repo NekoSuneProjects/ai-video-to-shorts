@@ -1,0 +1,15 @@
+node_modules
+.dist
+.dist-*
+dist
+out
+.DS_Store
+*.log
+*.tmp
+*.srt
+*.ass
+*.wts
+*.wav
+*.json
+ai-short-maker/
+shorts-output/
