@@ -1,6 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
-const { autoUpdater } = require("electron-updater");
 const fs = require("fs");
+const { checkForUpdate, openUpdateUrl, downloadAndInstall } = require("./update.cjs");
 const path = require("path");
 const { processVideo } = require("./processor.cjs");
 
@@ -28,8 +28,6 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = false;
   const updateStatePath = path.join(app.getPath("userData"), "update-state.json");
 
   const readUpdateState = () => {
@@ -103,35 +101,29 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("update:check", async (event) => {
-    const updateProvider = process.env.UPDATE_PROVIDER || "github";
     const snoozed = !shouldNotifyUpdate();
+    event.sender.send("update:status", { status: "checking", snoozed });
     try {
-      event.sender.send("update:status", { status: "checking", snoozed });
-      autoUpdater.allowPrerelease = getUpdateChannel() === "beta";
-      if (updateProvider === "generic") {
-        const updateUrl = process.env.UPDATE_URL;
-        if (!updateUrl) {
-          event.sender.send("update:status", { status: "disabled", snoozed });
-          return { status: "disabled" };
-        }
-        autoUpdater.setFeedURL({ provider: "generic", url: updateUrl });
-      } else {
-        autoUpdater.setFeedURL({
-          provider: "github",
-          owner: "NekoSuneProjects",
-          repo: "ai-video-to-shorts"
-        });
-      }
-      autoUpdater.checkForUpdates();
-      return { status: "checking" };
+      const result = await checkForUpdate({
+        owner: "NekoSuneProjects",
+        repo: "ai-video-to-shorts",
+        channel: getUpdateChannel()
+      });
+      event.sender.send("update:status", { ...result, snoozed });
+      return result;
     } catch (error) {
-      event.sender.send("update:status", { status: "error", message: error?.message, snoozed });
-      return { status: "error" };
+      const message = error?.message || "Update check failed";
+      event.sender.send("update:status", { status: "error", message, snoozed });
+      return { status: "error", message };
     }
   });
 
-  ipcMain.handle("update:install", async () => {
-    autoUpdater.quitAndInstall();
+  ipcMain.handle("update:install", async (_event, url) => {
+    return openUpdateUrl(url);
+  });
+
+  ipcMain.handle("update:downloadInstall", async (_event, asset) => {
+    return downloadAndInstall(asset);
   });
 
   ipcMain.handle("update:remindLater", async () => {
@@ -147,21 +139,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
-  autoUpdater.on("update-available", (info) => {
-    mainWindow?.webContents.send("update:status", { status: "available", info, snoozed: !shouldNotifyUpdate() });
-  });
-
-  autoUpdater.on("update-not-available", () => {
-    mainWindow?.webContents.send("update:status", { status: "none", snoozed: !shouldNotifyUpdate() });
-  });
-
-  autoUpdater.on("update-downloaded", (info) => {
-    mainWindow?.webContents.send("update:status", { status: "downloaded", info, snoozed: !shouldNotifyUpdate() });
-  });
-
-  autoUpdater.on("error", (error) => {
-    mainWindow?.webContents.send("update:status", { status: "error", message: error?.message, snoozed: !shouldNotifyUpdate() });
-  });
+  // no electron-updater events in custom GitHub polling flow
 });
 
 app.on("window-all-closed", () => {

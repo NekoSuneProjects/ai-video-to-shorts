@@ -141,7 +141,16 @@ export default function App() {
   };
 
   const handleUpdate = () => {
-    window.api?.installUpdate?.();
+    const url = updateStatus?.asset?.browser_download_url;
+    if (url) {
+      window.api?.installUpdate?.(url);
+    }
+  };
+
+  const downloadAndInstall = () => {
+    if (updateStatus?.asset) {
+      window.api?.downloadAndInstallUpdate?.(updateStatus.asset);
+    }
   };
 
   const remindLater = () => {
@@ -553,18 +562,16 @@ export default function App() {
           </div>
         </section>
 
-        {updateStatus.status === "available" || updateStatus.status === "downloaded" ? (
+        {updateStatus.status === "available" ? (
           <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm uppercase tracking-[0.2em] text-white/70">Update</p>
                 <p className="mt-2 text-lg font-medium text-white">
-                  {updateStatus.status === "downloaded"
-                    ? "Update ready to install"
-                    : "Update available"}
+                  Update available
                 </p>
                 <p className="mt-1 text-sm text-white/70">
-                  A newer version is available. You can install now or be reminded later.
+                  Version {updateStatus.latestVersion} is available (current {appVersion}).
                 </p>
                 <p className="mt-2 text-xs text-white/60">
                   Channel: {updateChannel === "beta" ? "Beta (pre-releases)" : "Stable (releases)"}
@@ -575,10 +582,10 @@ export default function App() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={handleUpdate}
+                  onClick={downloadAndInstall}
                   className="rounded-full bg-neon px-5 py-2 text-sm font-semibold text-ink shadow-xl shadow-neon/30 transition hover:brightness-110"
                 >
-                  {updateStatus.status === "downloaded" ? "Restart & install" : "Install update"}
+                  Download & install
                 </button>
                 <button
                   onClick={remindLater}
@@ -609,17 +616,17 @@ export default function App() {
             <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink p-6 shadow-2xl shadow-black/50">
               <p className="text-sm uppercase tracking-[0.2em] text-white/70">Update ready</p>
               <h3 className="mt-2 text-2xl font-semibold text-white">
-                Restart to apply the update?
+                Download update now?
               </h3>
               <p className="mt-2 text-sm text-white/70">
-                The update has been downloaded. Restart now to install it.
+                We will open the release asset in your browser.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
-                  onClick={handleUpdate}
+                  onClick={downloadAndInstall}
                   className="rounded-full bg-neon px-5 py-2 text-sm font-semibold text-ink shadow-xl shadow-neon/30 transition hover:brightness-110"
                 >
-                  Yes, restart
+                  Download & install
                 </button>
                 <button
                   onClick={dismissUpdatePrompt}

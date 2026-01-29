@@ -1,7 +1,7 @@
 {
   "name": "ai-video-to-shorts",
   "private": true,
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "AI Video to Shorts Converter with Whisper supported",
   "author": {
     "name": "NekoSuneVR",
@@ -34,6 +34,9 @@
         "nsis",
         "msi"
       ]
+    },
+    "nsis": {
+      "runAfterFinish": true
     },
     "linux": {
       "maintainer": "NekoSuneVR <nekosunevr@nekosunevr.co.uk>",
