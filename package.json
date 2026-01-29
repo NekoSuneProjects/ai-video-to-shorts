@@ -2,6 +2,11 @@
   "name": "ai-video-to-shorts",
   "private": true,
   "version": "0.1.1",
+  "description": "AI Video to Shorts Converter with Whisper supported",
+  "author": {
+    "name": "NekoSuneVR",
+    "email": "nekosunevr@nekosunevr.co.uk"
+  },
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -29,6 +34,7 @@
       ]
     },
     "linux": {
+      "maintainer": "NekoSuneVR <nekosunevr@nekosunevr.co.uk>",
       "target": [
         "AppImage",
         "deb"
