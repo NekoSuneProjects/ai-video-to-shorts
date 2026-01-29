@@ -122,8 +122,10 @@ app.whenReady().then(() => {
     return openUpdateUrl(url);
   });
 
-  ipcMain.handle("update:downloadInstall", async (_event, asset) => {
-    return downloadAndInstall(asset);
+  ipcMain.handle("update:downloadInstall", async (event, asset) => {
+    return downloadAndInstall(asset, (percent) => {
+      event.sender.send("update:progress", { percent });
+    });
   });
 
   ipcMain.handle("update:remindLater", async () => {

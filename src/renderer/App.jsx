@@ -39,6 +39,7 @@ export default function App() {
   const [updateChannel, setUpdateChannel] = useState("stable");
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
   const [appVersion, setAppVersion] = useState("0.0.0");
+  const [updateProgress, setUpdateProgress] = useState(null);
 
   const badge = useMemo(() => {
     if (!videoPath) return "No file";
@@ -63,6 +64,11 @@ export default function App() {
         }
       }
     });
+    const unsubscribeProgress = window.api?.onUpdateProgress?.((data) => {
+      if (typeof data?.percent === "number") {
+        setUpdateProgress(data.percent);
+      }
+    });
     window.api?.getUpdateChannel?.().then((res) => {
       if (res?.channel) setUpdateChannel(res.channel);
     });
@@ -75,6 +81,7 @@ export default function App() {
     }, 4 * 60 * 60 * 1000);
     return () => {
       if (unsubscribe) unsubscribe();
+      if (unsubscribeProgress) unsubscribeProgress();
       clearInterval(interval);
     };
   }, []);
@@ -149,6 +156,7 @@ export default function App() {
 
   const downloadAndInstall = () => {
     if (updateStatus?.asset) {
+      setUpdateProgress(0);
       window.api?.downloadAndInstallUpdate?.(updateStatus.asset);
     }
   };
@@ -578,6 +586,14 @@ export default function App() {
                 </p>
                 {updateStatus.snoozed ? (
                   <p className="mt-1 text-xs text-white/50">Updates are snoozed for now.</p>
+                ) : null}
+                {typeof updateProgress === "number" ? (
+                  <div className="mt-3 h-2 w-full max-w-md overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-neon transition-all"
+                      style={{ width: `${updateProgress}%` }}
+                    />
+                  </div>
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-3">

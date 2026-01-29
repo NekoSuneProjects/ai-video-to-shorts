@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld("api", {
   setUpdateChannel: (channel) => ipcRenderer.invoke("update:setChannel", channel),
   getAppVersion: () => ipcRenderer.invoke("app:getVersion"),
   downloadAndInstallUpdate: (asset) => ipcRenderer.invoke("update:downloadInstall", asset),
+  onUpdateProgress: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on("update:progress", handler);
+    return () => ipcRenderer.removeListener("update:progress", handler);
+  },
   onUpdateStatus: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on("update:status", handler);

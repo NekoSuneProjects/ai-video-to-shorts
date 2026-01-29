@@ -1,7 +1,7 @@
 {
   "name": "ai-video-to-shorts",
   "private": true,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "AI Video to Shorts Converter with Whisper supported",
   "author": {
     "name": "NekoSuneVR",

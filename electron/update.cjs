@@ -97,19 +97,28 @@ function pickAsset(assets) {
   );
 }
 
-function downloadFile(url, destination) {
+function downloadFile(url, destination, onProgress) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(destination);
     const request = https.get(url, { headers: DEFAULT_HEADERS }, (response) => {
       if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
         file.close();
-        return resolve(downloadFile(response.headers.location, destination));
+        return resolve(downloadFile(response.headers.location, destination, onProgress));
       }
       if (response.statusCode !== 200) {
         file.close();
         return reject(new Error(`Download failed: ${response.statusCode}`));
       }
+      const total = Number(response.headers["content-length"] || 0);
+      let received = 0;
       response.pipe(file);
+      response.on("data", (chunk) => {
+        received += chunk.length;
+        if (total > 0 && onProgress) {
+          const pct = Math.min(Math.round((received / total) * 100), 100);
+          onProgress(pct);
+        }
+      });
       file.on("finish", () => file.close(() => resolve(destination)));
     });
     request.on("error", (error) => {
@@ -119,7 +128,7 @@ function downloadFile(url, destination) {
   });
 }
 
-async function downloadAndInstall(asset) {
+async function downloadAndInstall(asset, onProgress) {
   if (!asset?.browser_download_url) {
     throw new Error("No installer asset available");
   }
@@ -133,7 +142,7 @@ async function downloadAndInstall(asset) {
   const targetDir = app.getPath("temp");
   const targetPath = path.join(targetDir, fileName);
 
-  await downloadFile(asset.browser_download_url, targetPath);
+  await downloadFile(asset.browser_download_url, targetPath, onProgress);
 
   if (fileName.toLowerCase().endsWith(".msi")) {
     spawn("msiexec.exe", ["/i", targetPath], { detached: true, stdio: "ignore" }).unref();
